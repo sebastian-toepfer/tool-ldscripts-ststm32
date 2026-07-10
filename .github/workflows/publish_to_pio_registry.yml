@@ -1,0 +1,56 @@
+---
+name: publish to platform io registry
+
+on:
+  push:
+    tags:
+      - v*
+
+jobs:
+  publish:
+    permissions:
+      contents: write
+
+    name: publish to registry
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 #v7.0.0
+
+    - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 #v6.1.0
+      with:
+        path: |
+          ~/.cache/pip
+          ~/.platformio/.cache
+        key: ${{ runner.os }}-pio
+
+    - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 #v6.3.0
+      with:
+        python-version: '3.14'
+
+    - name: Install PlatformIO Core
+      run: pip install --upgrade platformio
+
+    - name: Generate package.json
+      run: |
+        TAG="${{ github.ref_name }}"
+        VERSION="${TAG#v}"
+
+        cat > package.json << EOF
+        {
+          "name": "tool-ldscripts-ststm32",
+          "version": "${VERSION}",
+          "description": "Linker scripts pack for STMicroelectronics STM32 platform",
+          "keywords": [
+            "linker scripts",
+            "stmicroelectronics",
+            "stm32"
+          ],
+          "homepage": "https://www.st.com/en/development-tools/stm32cubemx.html",
+          "license": "Apache-2.0"
+        }
+        EOF
+
+    - name: Publish package
+      run: pio pkg publish --no-interactive
+      env:
+        PLATFORMIO_AUTH_TOKEN: ${{ secrets.PIO_PAT}}
